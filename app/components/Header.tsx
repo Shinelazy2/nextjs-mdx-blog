@@ -10,7 +10,7 @@ export default function Header() {
             href="/"
             className="rounded-full px-4 py-1 text-center text-sm transition-colors hover:text-primary bg-muted font-medium text-primary"
           >
-            D5BL5G
+            Shinelazy2
           </Link>
           <Link
             href="/about"

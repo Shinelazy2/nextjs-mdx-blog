@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { CalendarDays } from "lucide-react";
 import { Post } from "../lib/posts";
+import dayjs from 'dayjs'
 
 // interface Post {
 //   id: string;
@@ -53,7 +54,7 @@ export default function PostList({ posts, selectedTag }: PostListProps) {
                 <div className="flex justify-between gap-3 text-sm text-gray-500 dark:text-gray-400">
                   <div className="flex items-center gap-1">
                     <CalendarDays className="w-3.5" />
-                    <span>{post.createdAt}</span>
+                    <span>{dayjs(post.createdAt).format('YYYY-MM-DD HH:mm')}</span>
                   </div>
                   {/* <div className="flex items-center gap-1">
                     <Clock3 className="w-3.5" />

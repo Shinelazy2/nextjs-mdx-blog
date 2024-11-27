@@ -409,9 +409,12 @@ export default function MDXEditor({ mode, postId }: MDXEditorProps) {
     }
 
     try {
+      // 태그에서 @ 기호 제거
+      const cleanedTags = tags.map(tag => tag.replace('@', ''));
+      
       const postData = {
         title: title,
-        tag: tags.join(', '),
+        tag: cleanedTags.join(', '),
         description: description,
         content,
       };
