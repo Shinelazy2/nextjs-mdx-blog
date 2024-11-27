@@ -286,12 +286,6 @@ export default function MDXEditor({ mode, postId }: MDXEditorProps) {
       aliases: ["link", "링크", "url", "href", "a"],
     },
     {
-      label: "이미지",
-      value: "![대체텍스트](이미지url)",
-      description: "이미지 삽입",
-      aliases: ["image", "이미지", "img", "사진", "picture"],
-    },
-    {
       label: "표",
       value: "| 제목1 | 제목2 |\n|--------|--------|\n| 내용1 | 내용2 |",
       description: "표 삽입",
