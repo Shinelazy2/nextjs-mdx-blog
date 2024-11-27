@@ -1,11 +1,10 @@
 import MDXEditor from "@/app/components/MDXEditor";
+import EditorLayout from "@/app/components/EditorLayout";
 
 export default function EditMdxPage({ params }: { params: { id: string } }) {
   return (
-    <main className="flex min-h-screen flex-col items-center p-4">
-      <div className="w-full max-w-[950px]">
-        <MDXEditor mode="edit" postId={parseInt(params.id)} />
-      </div>
-    </main>
+    <EditorLayout>
+      <MDXEditor mode="edit" postId={parseInt(params.id)} />
+    </EditorLayout>
   );
 } 

@@ -1,11 +1,10 @@
 import MDXEditor from "@/app/components/MDXEditor";
+import EditorLayout from "@/app/components/EditorLayout";
 
 export default function CreateMdxPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center p-4">
-      <div className="w-full max-w-[950px]">
-        <MDXEditor mode="create" />
-      </div>
-    </main>
+    <EditorLayout>
+      <MDXEditor mode="create" />
+    </EditorLayout>
   );
 } 
