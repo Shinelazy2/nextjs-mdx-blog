@@ -39,6 +39,142 @@ const TagDisplay = ({ tag }: { tag: string }) => (
   </span>
 );
 
+// 이미지 업로드 모달 인터페이스 추가
+interface ImageUploadModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onUpload: (imageUrl: string) => void;
+}
+
+// 이미지 업로드 모달 컴포넌트
+const ImageUploadModal = ({ isOpen, onClose, onUpload }: ImageUploadModalProps) => {
+  const [dragActive, setDragActive] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+  const [commandExecuted, setCommandExecuted] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const files = e.dataTransfer.files;
+    if (files?.[0]) {
+      await uploadImage(files[0]);
+    }
+  };
+
+  const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files?.[0]) {
+      await uploadImage(files[0]);
+    }
+  };
+
+  const uploadImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await axios.post('http://localhost:3000/mdx/upload-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      console.log("🚀 ~ uploadImage ~ response:", response)
+      const imageUrl = "http://localhost:3000" + response.data.imageUrl;
+      onUpload(imageUrl);
+      onClose();
+    } catch (error) {
+      console.error('이미지 업로드 실패:', error);
+      alert('이미지 업로드에 실패했습니다.');
+    }
+  };
+
+  const handleUrlSubmit = () => {
+    if (imageUrl.trim()) {
+      onUpload(imageUrl);
+      onClose();
+    }
+  };
+
+  const handleClose = () => {
+    onClose();
+    setCommandExecuted(false);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-[500px]">
+        <h3 className="text-lg font-bold mb-4">이미지 업로드</h3>
+        
+        <div
+          className={`border-2 border-dashed rounded-lg p-8 mb-4 text-center ${
+            dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+          }`}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+        >
+          <p className="mb-2">이미지를 드래그하여 업로드하거나</p>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            파일 선택
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileInput}
+            accept="image/*"
+            className="hidden"
+          />
+        </div>
+
+        <div className="mb-4">
+          <p className="mb-2">또는 이미지 URL 입력</p>
+          <input
+            type="text"
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            className="w-full px-3 py-2 border rounded"
+            placeholder="https://"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={handleClose}
+            className="px-4 py-2 border rounded hover:bg-gray-100"
+          >
+            취소
+          </button>
+          <button
+            onClick={handleUrlSubmit}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            확인
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function MDXEditor({ mode, postId }: MDXEditorProps) {
   const params = useParams();
   const [content, setContent] = useState("");
@@ -61,6 +197,8 @@ export default function MDXEditor({ mode, postId }: MDXEditorProps) {
   const [selectedTagIndex, setSelectedTagIndex] = useState(0);
   const [serverTags, setServerTags] = useState<string[]>([]);
   const { toast } = useToast();
+  const [showImageUpload, setShowImageUpload] = useState(false);
+  const [commandExecuted, setCommandExecuted] = useState(false);
 
   const commands: CommandMenuItem[] = [
     {
@@ -216,6 +354,12 @@ export default function MDXEditor({ mode, postId }: MDXEditorProps) {
       description: "텍스트를 오른쪽으로 정렬",
       aliases: ["right", "오른쪽", "우측", "오른쪽정렬"],
     },
+    {
+      label: "이미지 업로드",
+      value: ";/이미지",
+      description: "이미지 업로드 또는 링크",
+      aliases: ["image", "이미지", "img", "사진", "picture", "upload"],
+    },
   ];
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -224,8 +368,24 @@ export default function MDXEditor({ mode, postId }: MDXEditorProps) {
 
     const cursorPosition = e.target.selectionStart;
     const textBeforeCursor = newContent.slice(0, cursorPosition);
-    const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
+    
+    // 명령어가 완성되고 스페이스나 엔터가 입력되었을 때만 실행
+    if (!commandExecuted && 
+        (textBeforeCursor.endsWith(';/이미지 ') || 
+         textBeforeCursor.endsWith(';/이미지\n'))) {
+      setShowImageUpload(true);
+      setCommandExecuted(true);
+      return;
+    }
 
+    // 현재 라인에 명령어가 없으면 실행 상태 초기화
+    const currentLine = textBeforeCursor.split('\n').pop() || '';
+    if (!currentLine.includes(';/이미지')) {
+      setCommandExecuted(false);
+    }
+
+    // 기존의 슬래시 명령어 로직...
+    const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
     if (lastSlashIndex !== -1) {
       const searchText = textBeforeCursor.slice(lastSlashIndex + 1);
       setCommandFilter(searchText.toLowerCase());
@@ -329,7 +489,7 @@ export default function MDXEditor({ mode, postId }: MDXEditorProps) {
     const currentLineNumber = lines.length;
     const lineHeight = parseInt(window.getComputedStyle(element).lineHeight);
 
-    // 현재 라인의 텍스트 길이를 기반으로 x 위치 계산
+    // 현재 라인의 텍스트 길이�� 기반으로 x 위치 계산
     const currentLine = lines[lines.length - 1];
     const charWidth = 8; // 모노스페이스 폰트 기준 예상 문자 너비
 
@@ -476,7 +636,7 @@ export default function MDXEditor({ mode, postId }: MDXEditorProps) {
   // 컴포넌트 마운트 시 MDX 목록 불러오기
   useEffect(() => {
     fetchMdxList();
-  }, []); // 빈 의존성 배열로 최초 마운트 시에만 실행
+  }, []); // 빈 의존성 배열로 최초 운트 시에만 실행
 
   // 태그 색 함수 추가
   const searchByTag = async (tagName: string) => {
@@ -694,6 +854,29 @@ export default function MDXEditor({ mode, postId }: MDXEditorProps) {
     setTags(prev => prev.filter(tag => tag !== tagToRemove));
   };
 
+  // 이미지 업로드 완료 핸들러 추가
+  const handleImageUpload = (imageUrl: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const textBeforeCursor = content.slice(0, start);
+    const textAfterCursor = content.slice(textarea.selectionEnd);
+    
+    // ;/이미지 명령어와 그 뒤의 공백/줄바꿈을 제거하고 이미지 마크다운 삽입
+    const newContent = textBeforeCursor.replace(/;\/이미지[\s\n]?/, '') + 
+      `![이미지](${imageUrl})\n` + 
+      textAfterCursor;
+
+    setContent(newContent);
+  };
+
+  // MDXEditor 컴포넌트 내부에 handleClose 함수 추가
+  const handleClose = () => {
+    setShowImageUpload(false);
+    setCommandExecuted(false);
+  };
+
   return (
     <div 
       className="w-full relative space-y-6"
@@ -876,6 +1059,12 @@ export default function MDXEditor({ mode, postId }: MDXEditorProps) {
           </div>
         )}
       </div>
+
+      <ImageUploadModal
+        isOpen={showImageUpload}
+        onClose={handleClose}
+        onUpload={handleImageUpload}
+      />
     </div>
   );
 }
